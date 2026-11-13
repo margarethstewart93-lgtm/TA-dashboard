@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Seasoned Voyages HQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SV</div>
+      <div>
+        <div class="brand-name" data-bind="brand">Seasoned Voyages</div>
+        <div class="brand-sub">Advisor HQ</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button data-tab="home" class="active">🏠 <span>Home</span></button>
+      <button data-tab="resources">🔗 <span>Resources</span></button>
+      <div class="nav-label">Marketing</div>
+      <button data-tab="studio">✨ <span>Content Studio</span></button>
+      <button data-tab="calendar">🗓️ <span>Content Calendar</span></button>
+      <button data-tab="ideas">💡 <span>Ideas &amp; Pillars</span></button>
+      <div class="nav-label">Sales</div>
+      <button data-tab="clients">🧳 <span>Clients &amp; Trips</span></button>
+      <button data-tab="invoices">🧾 <span>Invoicing</span></button>
+      <div class="nav-label">Setup</div>
+      <button data-tab="settings">⚙️ <span>Brand &amp; Settings</span></button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <!-- HOME -->
+    <section id="tab-home" class="tab active">
+      <header class="page-head">
+        <h1 id="greeting">Welcome back</h1>
+        <p class="muted" id="today"></p>
+      </header>
+      <div class="stats" id="home-stats"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Coming up this week</h2><button class="link" data-goto="calendar">Open calendar →</button></div>
+          <ul class="list" id="home-upcoming"></ul>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>To-do</h2></div>
+          <form id="todo-form" class="inline-form">
+            <input name="text" placeholder="Add a task…" required />
+            <button class="btn">Add</button>
+          </form>
+          <ul class="list todo" id="todo-list"></ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Quick launch</h2><button class="link" data-goto="resources">Manage →</button></div>
+        <div class="quick" id="home-quick"></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section id="tab-resources" class="tab">
+      <header class="page-head">
+        <h1>Resources</h1>
+        <p class="muted">Your research, booking, and business tools in one place.</p>
+      </header>
+      <div id="resource-groups"></div>
+      <div class="card">
+        <div class="card-head"><h2>Add a resource</h2></div>
+        <form id="resource-form" class="form-grid">
+          <label>Name<input name="name" required /></label>
+          <label>URL<input name="url" type="url" placeholder="https://" required /></label>
+          <label>Category
+            <select name="category">
+              <option>My Business</option><option>Marketing</option><option>Agency</option><option>Research</option><option>Booking</option>
+            </select>
+          </label>
+          <label>Note<input name="note" placeholder="What it's for" /></label>
+          <div class="span-2"><button class="btn">Add resource</button></div>
+        </form>
+      </div>
+      <div class="card placeholder">
+        <div class="card-head"><h2>🏨 Supplier Hub</h2><span class="pill">Coming soon</span></div>
+        <p class="muted">Placeholder for the suppliers you work with — cruise lines, tour operators, hotel programs, DMCs. Once you share details we'll add logins, BDM contacts, commission notes, and current promos here. Suppliers you add below already show up in the Content Studio dropdown.</p>
+        <form id="supplier-form" class="inline-form">
+          <input name="name" placeholder="Supplier name (e.g. a cruise line or tour operator)" required />
+          <input name="url" type="url" placeholder="Agent portal URL (optional)" />
+          <button class="btn">Add</button>
+        </form>
+        <div class="chips" id="supplier-list"></div>
+      </div>
+    </section>
+
+    <!-- CONTENT STUDIO -->
+    <section id="tab-studio" class="tab">
+      <header class="page-head">
+        <h1>Content Studio</h1>
+        <p class="muted">Plug in a supplier offer → get an Instagram caption, Canva carousel outline, Reel script, blog draft, and email blurb tuned to your niche. Edit anything, then copy or schedule it.</p>
+      </header>
+      <div class="studio">
+        <form id="offer-form" class="card offer-form">
+          <div class="card-head"><h2>1 · The offer</h2><button type="button" class="link" id="load-sample">Load sample</button></div>
+          <label>Supplier
+            <input name="supplier" list="supplier-options" placeholder="Who's offering it?" required />
+            <datalist id="supplier-options"></datalist>
+          </label>
+          <label>Offer / trip name<input name="title" placeholder="e.g. 10-Night Mediterranean Voyage" required /></label>
+          <label>Destination<input name="destination" placeholder="e.g. Greek Isles" required /></label>
+          <div class="row-2">
+            <label>Travel window<input name="travelDates" placeholder="e.g. Spring 2027" /></label>
+            <label>Book by<input name="deadline" type="date" /></label>
+          </div>
+          <label>Price / starting from<input name="price" placeholder="e.g. From $3,299 pp" /></label>
+          <label>The perk / promo<input name="perk" placeholder="e.g. Free drinks package + $500 onboard credit" /></label>
+          <label>Highlights <span class="hint">(one per line)</span>
+            <textarea name="highlights" rows="4" placeholder="Sunset in Santorini&#10;Small-ship, uncrowded ports&#10;Included shore excursions"></textarea>
+          </label>
+          <div class="card-head sub"><h2>2 · Angle</h2></div>
+          <label>Who is this for?
+            <select name="audience" id="audience-select"></select>
+          </label>
+          <div class="row-2">
+            <label>Tone
+              <select name="tone">
+                <option value="warm">Warm &amp; personal</option>
+                <option value="luxe">Elevated &amp; luxe</option>
+                <option value="adventure">Curious &amp; adventurous</option>
+                <option value="practical">Practical &amp; value-focused</option>
+              </select>
+            </label>
+            <label>Content pillar
+              <select name="pillar" id="pillar-select"></select>
+            </label>
+          </div>
+          <label>Your personal note <span class="hint">(optional — why you love it)</span>
+            <textarea name="personal" rows="2" placeholder="e.g. I sailed this itinerary last fall and the Kotor sail-in took my breath away."></textarea>
+          </label>
+          <div class="actions">
+            <button class="btn primary">Generate content</button>
+            <button type="button" class="btn ghost" id="save-offer">Save offer</button>
+          </div>
+          <div id="saved-offers"></div>
+        </form>
+
+        <div class="outputs" id="outputs">
+          <div class="empty card">
+            <p>✨ Fill in an offer and hit <strong>Generate content</strong>.</p>
+            <p class="muted">Tip: set your niche, voice, hashtags, and booking link in <button class="link" data-goto="settings">Brand &amp; Settings</button> so every draft sounds like you.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section id="tab-calendar" class="tab">
+      <header class="page-head row">
+        <div>
+          <h1>Content Calendar</h1>
+          <p class="muted">Plan Instagram, blog, and email content. Click a day to add a post.</p>
+        </div>
+        <button class="btn primary" id="new-post">+ New post</button>
+      </header>
+      <div class="card">
+        <div class="cal-toolbar">
+          <button class="btn ghost" id="cal-prev">‹</button>
+          <h2 id="cal-title"></h2>
+          <button class="btn ghost" id="cal-next">›</button>
+          <button class="btn ghost" id="cal-today">Today</button>
+          <div class="legend" id="cal-legend"></div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>All posts</h2>
+          <select id="post-filter">
+            <option value="">All statuses</option><option>Idea</option><option>Draft</option><option>Scheduled</option><option>Published</option>
+          </select>
+        </div>
+        <div class="table-wrap"><table class="table" id="post-table"></table></div>
+      </div>
+    </section>
+
+    <!-- IDEAS -->
+    <section id="tab-ideas" class="tab">
+      <header class="page-head">
+        <h1>Ideas &amp; Pillars</h1>
+        <p class="muted">Your content structure: pillars keep your feed balanced; the idea bank means you never stare at a blank page.</p>
+      </header>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Content pillars</h2></div>
+          <div id="pillar-list"></div>
+          <form id="pillar-form" class="inline-form">
+            <input name="name" placeholder="New pillar" required />
+            <input name="mix" type="number" min="0" max="100" placeholder="% mix" style="max-width:90px" />
+            <button class="btn">Add</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Weekly rhythm</h2></div>
+          <div id="rhythm"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Idea bank</h2></div>
+        <form id="idea-form" class="inline-form">
+          <input name="text" placeholder="Capture an idea…" required />
+          <select name="pillar" id="idea-pillar"></select>
+          <button class="btn">Add</button>
+        </form>
+        <div class="idea-grid" id="idea-list"></div>
+      </div>
+    </section>
+
+    <!-- CLIENTS -->
+    <section id="tab-clients" class="tab">
+      <header class="page-head row">
+        <div>
+          <h1>Clients &amp; Trips</h1>
+          <p class="muted">A lightweight pipeline to use until you pick a full CRM. Export anytime to move your data.</p>
+        </div>
+        <button class="btn primary" id="new-client">+ New client</button>
+      </header>
+      <div class="pipeline" id="pipeline"></div>
+      <div class="card">
+        <div class="card-head"><h2>Choosing a CRM later</h2></div>
+        <p class="muted">When you're ready, compare travel-specific CRMs (and check what WorldVia offers or discounts for its advisors) against these must-haves:</p>
+        <ul class="checklist" id="crm-checklist"></ul>
+      </div>
+    </section>
+
+    <!-- INVOICES -->
+    <section id="tab-invoices" class="tab">
+      <header class="page-head">
+        <h1>Invoicing</h1>
+        <p class="muted">Placeholder for planning fees, deposits, and commission tracking.</p>
+      </header>
+      <div class="card placeholder">
+        <div class="card-head"><h2>🧾 Invoices &amp; commissions</h2><span class="pill">Coming soon</span></div>
+        <p class="muted">Once your first bookings come in, this is where you'll track:</p>
+        <ul class="bullets">
+          <li><strong>Planning fees</strong> you invoice clients directly</li>
+          <li><strong>Supplier payments</strong> — deposit &amp; final payment due dates per trip</li>
+          <li><strong>Commissions</strong> — expected vs. received from suppliers via WorldVia</li>
+        </ul>
+        <p class="muted">Many travel CRMs bundle invoicing; if yours doesn't, a tool like QuickBooks or Wave can connect here via a link in Resources.</p>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Commission estimator</h2></div>
+        <div class="form-grid" id="comm-calc">
+          <label>Trip value ($)<input type="number" id="cc-value" value="8000" /></label>
+          <label>Commission rate (%)<input type="number" id="cc-rate" value="12" /></label>
+          <label>Your host split (%)<input type="number" id="cc-split" value="80" /></label>
+          <label>Planning fee ($)<input type="number" id="cc-fee" value="0" /></label>
+        </div>
+        <p class="calc-out" id="cc-out"></p>
+        <p class="hint">Rates and splits vary by supplier and your WorldVia agreement — plug in your actual numbers.</p>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab">
+      <header class="page-head">
+        <h1>Brand &amp; Settings</h1>
+        <p class="muted">These feed every draft the Content Studio writes.</p>
+      </header>
+      <form id="settings-form" class="card form-grid">
+        <label>Business name<input name="brand" /></label>
+        <label>Your first name<input name="owner" placeholder="Used in sign-offs" /></label>
+        <label>Website<input name="website" type="url" /></label>
+        <label>Booking / inquiry link<input name="bookingLink" type="url" placeholder="e.g. your Squarespace contact page" /></label>
+        <label>Instagram handle<input name="instagram" placeholder="@seasonedvoyages" /></label>
+        <label>Email signup link<input name="signupLink" type="url" placeholder="Mailchimp signup form" /></label>
+        <label class="span-2">Your niche <span class="hint">(one sentence)</span>
+          <textarea name="niche" rows="2"></textarea>
+        </label>
+        <label class="span-2">Audience segments <span class="hint">(one per line — appear in the Studio's "Who is this for?")</span>
+          <textarea name="audiences" rows="4"></textarea>
+        </label>
+        <label class="span-2">Signature phrases / brand voice notes
+          <textarea name="voice" rows="2"></textarea>
+        </label>
+        <label class="span-2">Always-use hashtags <span class="hint">(space separated)</span>
+          <input name="hashtags" />
+        </label>
+        <div class="span-2 actions"><button class="btn primary">Save settings</button><span class="saved-msg" id="settings-saved"></span></div>
+      </form>
+      <div class="card">
+        <div class="card-head"><h2>Backup &amp; data</h2></div>
+        <p class="muted">Everything is saved in this browser. Export a backup regularly, or to move to another computer.</p>
+        <div class="actions">
+          <button class="btn" id="export-data">Export backup (.json)</button>
+          <label class="btn ghost file-btn">Import backup<input type="file" id="import-data" accept="application/json" hidden /></label>
+          <button class="btn danger" id="reset-data">Reset to defaults</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Post modal -->
+  <dialog id="post-dialog">
+    <form method="dialog" id="post-form" class="modal">
+      <h2 id="post-dialog-title">Post</h2>
+      <input type="hidden" name="id" />
+      <label>Title<input name="title" required /></label>
+      <div class="row-2">
+        <label>Platform
+          <select name="platform">
+            <option>Instagram Post</option><option>Instagram Carousel</option><option>Instagram Reel</option><option>Instagram Story</option><option>Blog</option><option>Email</option>
+          </select>
+        </label>
+        <label>Date<input name="date" type="date" required /></label>
+      </div>
+      <div class="row-2">
+        <label>Status
+          <select name="status"><option>Idea</option><option>Draft</option><option>Scheduled</option><option>Published</option></select>
+        </label>
+        <label>Pillar<select name="pillar" id="post-pillar"></select></label>
+      </div>
+      <label>Content<textarea name="content" rows="8"></textarea></label>
+      <div class="actions spread">
+        <button type="button" class="btn danger" id="delete-post">Delete</button>
+        <div class="actions">
+          <button type="button" class="btn ghost" id="copy-post">Copy</button>
+          <button value="cancel" formnovalidate class="btn ghost">Cancel</button>
+          <button value="save" class="btn primary">Save</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Client modal -->
+  <dialog id="client-dialog">
+    <form method="dialog" id="client-form" class="modal">
+      <h2>Client</h2>
+      <input type="hidden" name="id" />
+      <div class="row-2">
+        <label>Name<input name="name" required /></label>
+        <label>Stage
+          <select name="stage"></select>
+        </label>
+      </div>
+      <div class="row-2">
+        <label>Email<input name="email" type="email" /></label>
+        <label>Phone<input name="phone" /></label>
+      </div>
+      <label>Trip idea / destination<input name="trip" /></label>
+      <div class="row-2">
+        <label>Travel dates<input name="dates" placeholder="e.g. May 2027" /></label>
+        <label>Est. trip value ($)<input name="value" type="number" /></label>
+      </div>
+      <label>Source<input name="source" placeholder="Instagram, referral, website…" /></label>
+      <label>Notes<textarea name="notes" rows="4"></textarea></label>
+      <div class="actions spread">
+        <button type="button" class="btn danger" id="delete-client">Delete</button>
+        <div class="actions">
+          <button value="cancel" formnovalidate class="btn ghost">Cancel</button>
+          <button value="save" class="btn primary">Save</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
