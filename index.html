@@ -104,6 +104,23 @@
       <div class="studio">
         <form id="offer-form" class="card offer-form">
           <div class="card-head"><h2>1 · The offer</h2><button type="button" class="link" id="load-sample">Load sample</button></div>
+          <div class="pdf-box">
+            <div class="pdf-drop" id="pdf-drop">
+              <input type="file" id="pdf-input" accept="application/pdf,.pdf" hidden />
+              <div>📄 <strong>Drop a supplier PDF</strong> or <button type="button" class="link" id="pdf-pick">browse</button></div>
+              <div class="hint">Flyers, promo sheets, terms &amp; conditions. The PDF is read on this device.</div>
+            </div>
+            <div class="pdf-status" id="pdf-status" role="status"></div>
+            <details id="fp-details">
+              <summary>Fine print text <span class="hint">(from the PDF, or paste it here)</span></summary>
+              <textarea name="finePrint" id="fine-print" rows="7" placeholder="Paste the offer's terms &amp; conditions…"></textarea>
+            </details>
+            <div class="actions">
+              <button type="button" class="btn sm" id="tldr-basic">Summarize fine print</button>
+              <button type="button" class="btn sm primary" id="tldr-ai" hidden>✨ Summarize with Claude</button>
+            </div>
+            <textarea name="tldr" id="tldr-store" hidden></textarea>
+          </div>
           <label>Supplier
             <input name="supplier" list="supplier-options" placeholder="Who's offering it?" required />
             <datalist id="supplier-options"></datalist>
@@ -146,10 +163,13 @@
           <div id="saved-offers"></div>
         </form>
 
-        <div class="outputs" id="outputs">
+        <div class="outputs">
+          <div id="tldr-wrap"></div>
+          <div id="outputs">
           <div class="empty card">
             <p>✨ Fill in an offer and hit <strong>Generate content</strong>.</p>
             <p class="muted">Tip: set your niche, voice, hashtags, and booking link in <button class="link" data-goto="settings">Brand &amp; Settings</button> so every draft sounds like you.</p>
+          </div>
           </div>
         </div>
       </div>
@@ -439,6 +459,7 @@
   </dialog>
 
   <div class="toast" id="toast"></div>
+  <script src="fineprint.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

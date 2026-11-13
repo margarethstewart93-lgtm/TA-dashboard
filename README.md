@@ -13,7 +13,7 @@ Your data is saved in your browser (localStorage). Use **Brand & Settings → Ex
 |---|---|
 | **Home** | Posts due this week, to-dos, quick-launch links, pipeline stats |
 | **Resources** | Website/Squarespace, Google Workspace, Canva, Mailchimp, Instagram, WorldVia, research links. Add your own. **Supplier Hub** placeholder. |
-| **Content Studio** | Plug in a supplier offer → Instagram caption (with char/hashtag counter), Canva carousel outline, Reel script + Story sequence, SEO blog draft for Squarespace, Mailchimp email. Pick audience, tone, and pillar; shuffle hooks; save offers; schedule one piece or the whole campaign. |
+| **Content Studio** | **Upload a supplier PDF** (or paste the terms) → plain-English *Fine print TL;DR*: key dates, numbers, deposit, cancellation, restrictions, extra costs, and a glossary of jargon, written to translate cleanly, with a Google Translate button. In the claude.ai preview, Claude can write the summary, translate it in-page, and auto-fill the offer. Then plug in the offer → Instagram caption (with char/hashtag counter), Canva carousel outline, Reel script + Story sequence, SEO blog draft for Squarespace, Mailchimp email. Pick audience, tone, and pillar; shuffle hooks; save offers; schedule one piece or the whole campaign. |
 | **Content Calendar** | Month view + list of all posts, color-coded by platform, with status (Idea → Draft → Scheduled → Published). |
 | **Ideas & Pillars** | Content pillars with target mix, suggested weekly rhythm, and an idea bank ("Plan it →" drops an idea onto the calendar). |
 | **Clients & Trips** | Lightweight pipeline (Lead → Consultation → Proposal Sent → Booked → Traveled) until you choose a CRM, plus a CRM must-have checklist. |
@@ -24,4 +24,5 @@ Your data is saved in your browser (localStorage). Use **Brand & Settings → Ex
 ## Files
 - `index.html` — layout
 - `styles.css` — styling (light & dark mode)
+- `fineprint.js` — PDF reading (pdf.js, loaded on demand) and the fine-print summarizer
 - `app.js` — all logic and content templates (edit the `HOOKS` / `BODY` sections to tune your voice)

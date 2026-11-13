@@ -540,6 +540,7 @@
   function fillOffer(o) {
     const f = $('#offer-form');
     Object.entries(o).forEach(([k, v]) => { if (f.elements[k]) f.elements[k].value = v; });
+    renderTldr();
   }
   $('#saved-offers').addEventListener('click', (e) => {
     const id = e.target.dataset.loadOffer;
@@ -554,8 +555,150 @@
       perk: 'Free beverage package + $300 onboard credit',
       highlights: 'Sunset sail-away from Santorini\nSmaller ship, uncrowded ports\nOvernight in Mykonos\nShore excursions included',
       tone: 'warm', personal: '',
+      finePrint: SAMPLE_FINE_PRINT, tldr: '',
     });
+    setPdfStatus('Sample fine print loaded. Try "Summarize fine print".', 'ok');
   });
+
+  // ---------- Fine print: PDF upload + TL;DR ----------
+  const SAMPLE_FINE_PRINT = `*Offer valid on new bookings made November 15, 2026 through December 31, 2026 for select 2027 Greek Isles sailings departing April 1, 2027 to June 30, 2027. Fares are cruise-only, per person, based on double occupancy, in USD, and include taxes, fees and port expenses. Beverage package applies to 1st and 2nd guests in stateroom only; guests must be 21 or older for alcoholic beverages. Onboard credit of $300 per stateroom has no cash value and is forfeited if not used by the end of the voyage. A non-refundable deposit of $500 per person is due at time of booking. Final payment is due 120 days prior to departure. Cancellations made 119 to 90 days prior to departure incur a penalty of 50% of the total fare; cancellations within 89 days of departure are 100% non-refundable. Gratuities of $18 per person per day are not included. Offer is capacity controlled, not combinable with other promotions, and may be withdrawn at any time without prior notice. Single supplement of 175% applies to solo travelers. Promo code GREEK27 must be applied at time of booking.`;
+
+  const LANGS = [['es', 'Spanish'], ['fr', 'French'], ['de', 'German'], ['it', 'Italian'], ['pt', 'Portuguese'], ['nl', 'Dutch'], ['ja', 'Japanese'], ['ko', 'Korean'], ['zh-CN', 'Chinese (Simplified)'], ['vi', 'Vietnamese'], ['tl', 'Tagalog'], ['hi', 'Hindi'], ['ar', 'Arabic'], ['ru', 'Russian'], ['pl', 'Polish']];
+  let sampleFn = null; // Claude, when running inside the claude.ai preview
+  let aiFields = null; let tldrSource = 'basic'; let aiCtl = null;
+  const AI_ERRORS = {
+    not_granted: 'Claude access was not allowed for this page.', sampling_disabled: 'Claude is not available for this account.',
+    rate_limited: 'Too many requests right now. Try again in a minute.', session_expired: 'Please sign in to Claude again.',
+    prompt_too_large: 'This PDF is too long. Paste just the terms section.', refused: 'Claude could not summarize this text.',
+    invalid_json: 'The answer came back garbled. Try again.',
+  };
+  const aiError = (e) => AI_ERRORS[e?.code] || 'Something went wrong. Try again.';
+
+  function setPdfStatus(msg, kind = '') { const el = $('#pdf-status'); el.textContent = msg; el.className = 'pdf-status ' + kind; }
+  function offerCtx() { return formToObj($('#offer-form')); }
+
+  async function handlePdf(file) {
+    if (!file) return;
+    if (!/pdf$/i.test(file.type) && !/\.pdf$/i.test(file.name)) return setPdfStatus('That file is not a PDF.', 'err');
+    setPdfStatus(`Reading ${file.name}…`);
+    try {
+      const { text, pages } = await window.FinePrint.extractPdfText(file);
+      if (text.replace(/\s/g, '').length < 40) {
+        setPdfStatus('No readable text found. This PDF may be a scanned image. Paste the fine print in the box below instead.', 'err');
+        $('#fp-details').open = true; return;
+      }
+      $('#fine-print').value = text;
+      $('#fp-details').open = false;
+      setPdfStatus(`✓ Read ${pages} page${pages > 1 ? 's' : ''} from ${file.name} (${text.length.toLocaleString()} characters). Summarizing…`, 'ok');
+      makeTldr(sampleFn ? 'ai' : 'basic');
+    } catch (err) {
+      setPdfStatus('Could not read this PDF: ' + (err.message || err), 'err');
+    }
+  }
+  const drop = $('#pdf-drop');
+  drop.addEventListener('click', (e) => { if (e.target.id !== 'pdf-input') $('#pdf-input').click(); });
+  $('#pdf-input').addEventListener('change', (e) => { handlePdf(e.target.files[0]); e.target.value = ''; });
+  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => handlePdf(e.dataTransfer.files[0]));
+
+  async function makeTldr(mode) {
+    const text = $('#fine-print').value.trim();
+    if (!text) { $('#fp-details').open = true; return setPdfStatus('Upload a PDF or paste the fine print first.', 'err'); }
+    aiFields = null;
+    if (mode === 'ai' && sampleFn) {
+      aiCtl?.abort(); aiCtl = new AbortController();
+      setPdfStatus('✨ Claude is reading the fine print… (this can take up to a minute)');
+      $('#tldr-ai').disabled = true;
+      try {
+        const res = await window.FinePrint.aiSummarize(sampleFn, text, offerCtx(), { signal: aiCtl.signal });
+        aiFields = res.fields; tldrSource = 'ai';
+        $('#tldr-store').value = res.text;
+        setPdfStatus('✓ Summary ready.', 'ok');
+      } catch (e) {
+        if (e?.code === 'cancelled') return;
+        if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled'].includes(e?.code)) { sampleFn = null; updateAiUi(); }
+        setPdfStatus(aiError(e) + ' Showing the built-in summary instead.', 'err');
+        tldrSource = 'basic'; $('#tldr-store').value = window.FinePrint.summarize(text, offerCtx());
+      } finally { $('#tldr-ai').disabled = false; }
+    } else {
+      tldrSource = 'basic';
+      $('#tldr-store').value = window.FinePrint.summarize(text, offerCtx());
+      if (!$('#tldr-store').value) return setPdfStatus('Could not find sentences to summarize in this text.', 'err');
+      setPdfStatus('✓ Summary ready.', 'ok');
+    }
+    renderTldr();
+    if (window.innerWidth < 1000) $('#tldr-wrap').scrollIntoView({ behavior: 'smooth' });
+  }
+  $('#tldr-basic').addEventListener('click', () => makeTldr('basic'));
+  $('#tldr-ai').addEventListener('click', () => makeTldr('ai'));
+
+  function renderTldr() {
+    const text = $('#tldr-store').value;
+    if (!text) { $('#tldr-wrap').innerHTML = ''; return; }
+    let lang = 'es';
+    try { lang = localStorage.getItem(STORE_KEY + ':lang') || 'es'; } catch { /* ignore */ }
+    $('#tldr-wrap').innerHTML = `
+      <div class="card tldr-card">
+        <div class="out-head">
+          <h2>📄 Fine print TL;DR <span class="src ${tldrSource === 'ai' ? 'ai' : ''}">${tldrSource === 'ai' ? 'by Claude' : 'built-in'}</span></h2>
+          <div class="actions">
+            ${aiFields ? '<button class="btn sm primary" id="tldr-fill">Fill empty offer fields</button>' : ''}
+            <button class="btn sm" id="tldr-copy">Copy</button>
+          </div>
+        </div>
+        <textarea id="tldr-text" rows="${Math.min(24, text.split('\n').length + 1)}">${esc(text)}</textarea>
+        <div class="meta">${tldrSource === 'ai' ? 'Written in short, plain sentences so it translates cleanly.' : 'Built-in summary: picks the key sentences and simplifies wording. Edit as needed and always check the original terms.'}</div>
+        <div class="translate-row">
+          <label style="margin:0;flex-direction:row;align-items:center;gap:8px">Translate to
+            <select id="tldr-lang">${LANGS.map(([c, n]) => `<option value="${c}" ${c === lang ? 'selected' : ''}>${n}</option>`).join('')}</select>
+          </label>
+          <a class="btn sm ghost" id="tldr-gt" target="_blank" rel="noopener">Google Translate ↗</a>
+          ${sampleFn ? '<button class="btn sm" id="tldr-tr">✨ Translate here</button>' : ''}
+        </div>
+        <div id="tldr-translation"></div>
+      </div>`;
+    updateGtLink();
+  }
+  function updateGtLink() {
+    const a = $('#tldr-gt'); if (!a) return;
+    a.href = `https://translate.google.com/?sl=en&tl=${encodeURIComponent($('#tldr-lang').value)}&text=${encodeURIComponent($('#tldr-text').value.slice(0, 4500))}&op=translate`;
+  }
+  $('#tldr-wrap').addEventListener('input', (e) => {
+    if (e.target.id === 'tldr-text') { $('#tldr-store').value = e.target.value; updateGtLink(); }
+  });
+  $('#tldr-wrap').addEventListener('change', (e) => {
+    if (e.target.id === 'tldr-lang') { try { localStorage.setItem(STORE_KEY + ':lang', e.target.value); } catch { /* ignore */ } updateGtLink(); }
+  });
+  $('#tldr-wrap').addEventListener('click', async (e) => {
+    const id = e.target.id;
+    if (id === 'tldr-copy') copy($('#tldr-text').value);
+    if (id === 'tldr-fill' && aiFields) {
+      const f = $('#offer-form').elements; let n = 0;
+      const vals = { ...aiFields, highlights: Array.isArray(aiFields.highlights) ? aiFields.highlights.join('\n') : aiFields.highlights };
+      if (vals.deadline && !/^\d{4}-\d{2}-\d{2}$/.test(vals.deadline)) delete vals.deadline;
+      Object.entries(vals).forEach(([k, v]) => { if (f[k] && v && !String(f[k].value).trim()) { f[k].value = v; n++; } });
+      toast(n ? `Filled ${n} empty field${n > 1 ? 's' : ''}` : 'All fields already filled');
+    }
+    if (id === 'tldr-tr' && sampleFn) {
+      const sel = $('#tldr-lang'); const langName = sel.options[sel.selectedIndex].text;
+      const out = $('#tldr-translation');
+      out.innerHTML = `<h3>${esc(langName)}</h3><textarea id="tldr-tr-text" rows="12" readonly>Thinking…</textarea><div class="actions" style="margin-top:6px"><button class="btn sm" id="tldr-tr-copy">Copy translation</button></div>`;
+      e.target.disabled = true;
+      try {
+        const txt = await window.FinePrint.aiTranslate(sampleFn, $('#tldr-text').value, langName, { onText: ({ text }) => { $('#tldr-tr-text').value = text; } });
+        $('#tldr-tr-text').value = txt; $('#tldr-tr-text').readOnly = false;
+      } catch (err) {
+        $('#tldr-tr-text').value = err?.text || ''; toast(aiError(err));
+      } finally { e.target.disabled = false; }
+    }
+    if (id === 'tldr-tr-copy') copy($('#tldr-tr-text').value);
+  });
+
+  function updateAiUi() { $('#tldr-ai').hidden = !sampleFn; if ($('#tldr-store').value) renderTldr(); }
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('sample').then((s) => { sampleFn = s || null; updateAiUi(); }).catch(() => {});
+  }
 
   // ---------- Posts / Calendar ----------
   const postDialog = $('#post-dialog');

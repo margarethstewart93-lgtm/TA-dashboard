@@ -252,3 +252,20 @@ dialog::backdrop { background: rgba(20, 26, 32, .45); }
 .doc-name a { color: var(--ink); }
 .client-card .docs { font-size: 11px; color: var(--muted); margin-top: 4px; }
 @media (max-width: 760px) { #client-docs { grid-template-columns: 1fr; } }
+
+/* Fine print / PDF */
+.pdf-box { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 16px; }
+.pdf-drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 14px; text-align: center; font-size: 14px; cursor: pointer; background: var(--surface); }
+.pdf-drop.over, .pdf-drop:hover { border-color: var(--accent); background: var(--accent-soft); }
+.pdf-status { font-size: 13px; margin: 8px 0 4px; color: var(--muted); }
+.pdf-status.err { color: var(--danger); }
+.pdf-status.ok { color: var(--accent); }
+.pdf-box details { margin: 6px 0 10px; }
+.pdf-box summary { cursor: pointer; font-size: 13px; font-weight: 500; padding: 4px 0; }
+.pdf-box details textarea { margin-top: 6px; font-size: 13px; }
+.tldr-card textarea { font-size: 14px; line-height: 1.55; background: var(--surface-2); }
+.tldr-card .translate-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.tldr-card .translate-row select { width: auto; }
+.tldr-card .src { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--gold-soft); color: var(--gold); font-family: Inter, sans-serif; }
+.tldr-card .src.ai { background: var(--accent-soft); color: var(--accent); }
+.tldr-card h3 { font-size: 13px; margin: 14px 0 6px; }
