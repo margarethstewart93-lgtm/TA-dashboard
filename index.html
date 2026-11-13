@@ -28,6 +28,7 @@
       <button data-tab="clients">🧳 <span>Clients &amp; Trips</span></button>
       <button data-tab="invoices">🧾 <span>Invoicing</span></button>
       <div class="nav-label">Business</div>
+      <button data-tab="accounting">📊 <span>Accounting</span></button>
       <button data-tab="legal">⚖️ <span>Legal Docs</span></button>
       <div class="nav-label">Setup</div>
       <button data-tab="settings">⚙️ <span>Brand &amp; Settings</span></button>
@@ -278,7 +279,66 @@
           <label>Planning fee ($)<input type="number" id="cc-fee" value="0" /></label>
         </div>
         <p class="calc-out" id="cc-out"></p>
+        <div class="actions" style="margin-top:10px"><button class="btn sm" id="cc-log">Log as expected commission →</button></div>
         <p class="hint">Rates and splits vary by supplier and your WorldVia agreement — plug in your actual numbers.</p>
+      </div>
+    </section>
+
+    <!-- ACCOUNTING -->
+    <section id="tab-accounting" class="tab">
+      <header class="page-head row">
+        <div>
+          <h1>Accounting</h1>
+          <p class="muted">Track revenue and expenses, and see your profit &amp; loss at a glance.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="new-expense">− Expense</button>
+          <button class="btn primary" id="new-income">+ Income</button>
+        </div>
+      </header>
+      <div class="filter-row">
+        <label>Year<select id="acct-year"></select></label>
+        <label>Period<select id="acct-period"></select></label>
+        <span class="hint" id="acct-range"></span>
+      </div>
+      <div class="stats" id="acct-stats"></div>
+      <div class="card">
+        <div class="card-head">
+          <h2 id="acct-chart-title">Revenue vs. expenses by month</h2>
+          <div class="actions">
+            <div class="legend static"><span style="--c:var(--c-rev)">Revenue</span><span style="--c:var(--c-exp)">Expenses</span></div>
+            <button class="link" id="acct-table-toggle">Show table</button>
+          </div>
+        </div>
+        <div class="chart-wrap" id="acct-chart"></div>
+        <div class="table-wrap" id="acct-month-table" hidden></div>
+      </div>
+      <div class="grid-2">
+        <div class="card" id="pl-card">
+          <div class="card-head"><h2>Profit &amp; loss</h2>
+            <button class="btn sm ghost" id="print-pl">Print / PDF</button>
+          </div>
+          <div id="pl-statement"></div>
+          <label class="inline-label">Set aside for taxes
+            <input type="number" id="tax-rate" min="0" max="60" step="1" style="width:80px" /> % of net profit
+          </label>
+          <p class="hint">A rough savings target, not tax advice. Ask your accountant what rate fits your situation.</p>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Expenses by category</h2></div>
+          <div id="exp-cats"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Transactions</h2>
+          <div class="actions">
+            <select id="txn-type-filter"><option value="">All</option><option>Income</option><option>Expense</option></select>
+            <input id="txn-search" placeholder="Search…" style="width:160px" />
+            <button class="btn sm ghost" id="export-csv">Export CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap"><table class="table" id="txn-table"></table></div>
+        <p class="hint" style="margin-top:12px">Revenue counts money <strong>received</strong>. Commissions you're still waiting on are logged as <strong>Expected</strong> and shown separately until you mark them received.</p>
       </div>
     </section>
 
@@ -458,6 +518,48 @@
     </form>
   </dialog>
 
+  <!-- Transaction modal -->
+  <dialog id="txn-dialog">
+    <form method="dialog" id="txn-form" class="modal">
+      <h2 id="txn-dialog-title">Transaction</h2>
+      <input type="hidden" name="id" />
+      <div class="seg" id="txn-kind">
+        <label><input type="radio" name="kind" value="Income" checked /> Income</label>
+        <label><input type="radio" name="kind" value="Expense" /> Expense</label>
+      </div>
+      <div class="row-2">
+        <label>Date<input name="date" type="date" required /></label>
+        <label>Amount ($)<input name="amount" type="number" step="0.01" min="0" required /></label>
+      </div>
+      <div class="row-2">
+        <label>Category<select name="category" id="txn-category"></select></label>
+        <label>Status<select name="status" id="txn-status"></select></label>
+      </div>
+      <label>Description<input name="desc" placeholder="e.g. Commission – Smith Greek Isles cruise" required /></label>
+      <div class="row-2">
+        <label>Client <span class="hint">(optional)</span><input name="client" list="txn-clients" /></label>
+        <label>Supplier / vendor <span class="hint">(optional)</span><input name="vendor" list="txn-vendors" /></label>
+      </div>
+      <datalist id="txn-clients"></datalist><datalist id="txn-vendors"></datalist>
+      <div class="row-2">
+        <label>Payment method<select name="method"><option></option><option>Bank transfer / ACH</option><option>Credit card</option><option>Debit card</option><option>Check</option><option>Host agency payout</option><option>PayPal / Venmo / Stripe</option><option>Cash</option></select></label>
+        <label>Receipt / invoice link<input name="receipt" type="url" placeholder="Google Drive link" /></label>
+      </div>
+      <label>Notes<textarea name="notes" rows="2"></textarea></label>
+      <div class="actions spread">
+        <div class="actions">
+          <button type="button" class="btn danger" id="delete-txn">Delete</button>
+          <button type="button" class="btn ghost" id="dup-txn">Duplicate</button>
+        </div>
+        <div class="actions">
+          <button value="cancel" formnovalidate class="btn ghost">Cancel</button>
+          <button value="save" class="btn primary">Save</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="tooltip" id="chart-tip" role="tooltip"></div>
   <div class="toast" id="toast"></div>
   <script src="fineprint.js"></script>
   <script src="app.js"></script>

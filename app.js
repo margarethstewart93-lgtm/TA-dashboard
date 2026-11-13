@@ -77,6 +77,8 @@
       { name: 'Photo & Testimonial Release', type: 'Waiver & Release', use: 'Before sharing client photos/reviews on Instagram' },
     ].map((d) => ({ id: uid(), status: 'Not started', version: '', updated: '', review: '', url: '', notes: '', ...d })),
     intakeText: null,
+    txns: [],
+    taxRate: 25,
     legalChecks: {},
   });
 
@@ -155,6 +157,7 @@
     renderClients();
     renderCommission();
     renderLegal();
+    renderAccounting();
   }
 
   // ---------- Home ----------
@@ -175,6 +178,7 @@
       [state.ideas.length, 'Ideas in the bank'],
       [active.length, 'Active clients'],
       [money(pipeline), 'Pipeline value'],
+      [money(ytdNet()), `Net profit ${new Date().getFullYear()} YTD`],
     ];
     $('#home-stats').innerHTML = stats.map(([n, l]) => `<div class="stat"><div class="num">${esc(n)}</div><div class="lbl">${esc(l)}</div></div>`).join('');
 
@@ -900,6 +904,261 @@
   }
   $('#comm-calc').addEventListener('input', renderCommission);
 
+  // ---------- Accounting ----------
+  const INCOME_CATS = ['Commission', 'Planning fee', 'Referral bonus', 'Supplier incentive / bonus', 'Other income'];
+  const EXPENSE_CATS = ['Host agency fees', 'Marketing & advertising', 'Software & subscriptions', 'Website & domain', 'Education & training', 'FAM & business travel', 'Professional services', 'Insurance', 'Licenses & registrations', 'Memberships & associations', 'Office & supplies', 'Phone & internet', 'Bank & payment fees', 'Meals (business)', 'Other expense'];
+  const STATUSES = { Income: ['Received', 'Expected'], Expense: ['Paid', 'Due'] };
+  const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const money2 = (n) => (n < 0 ? '−' : '') + '$' + Math.abs(Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const amt = (t) => Number(t.amount) || 0;
+  const isRev = (t) => t.kind === 'Income' && t.status === 'Received';
+  const isExp = (t) => t.kind === 'Expense' && t.status !== 'Due';
+  const sum = (arr) => arr.reduce((s, t) => s + amt(t), 0);
+  function ytdNet() {
+    const y = String(new Date().getFullYear());
+    const ts = (state.txns || []).filter((t) => t.date?.startsWith(y));
+    return sum(ts.filter(isRev)) - sum(ts.filter(isExp));
+  }
+
+  let acctYear = new Date().getFullYear(); let acctPeriod = 'year'; let showMonthTable = false;
+  function periodRange() {
+    const y = acctYear;
+    if (acctPeriod === 'year') return [`${y}-01-01`, `${y}-12-31`];
+    if (acctPeriod.startsWith('Q')) { const q = +acctPeriod[1]; const m1 = (q - 1) * 3 + 1; return [`${y}-${String(m1).padStart(2, '0')}-01`, ymd(new Date(y, m1 + 2, 0))]; }
+    const m = +acctPeriod; return [`${y}-${String(m).padStart(2, '0')}-01`, ymd(new Date(y, m, 0))];
+  }
+  const inRange = (t, [a, b]) => t.date >= a && t.date <= b;
+
+  function niceMax(v) {
+    if (v <= 0) return 1000;
+    const p = 10 ** Math.floor(Math.log10(v)); const n = v / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p;
+  }
+  const shortMoney = (v) => v >= 1000 ? '$' + (v / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 }) + 'k' : '$' + Math.round(v);
+  function barPath(x, y, w, h, r = 4) {
+    if (h <= 0) return '';
+    r = Math.min(r, h, w / 2);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  }
+
+  function monthly() {
+    const rows = MONTH_ABBR.map((m, i) => ({ m, i, rev: 0, exp: 0, expected: 0 }));
+    (state.txns || []).forEach((t) => {
+      if (!t.date?.startsWith(String(acctYear))) return;
+      const r = rows[+t.date.slice(5, 7) - 1];
+      if (isRev(t)) r.rev += amt(t); else if (isExp(t)) r.exp += amt(t);
+      else if (t.kind === 'Income' && t.status === 'Expected') r.expected += amt(t);
+    });
+    return rows;
+  }
+
+  function renderAccounting() {
+    if (!$('#tab-accounting')) return;
+    const txns = state.txns || [];
+    // filters
+    const years = new Set([new Date().getFullYear(), acctYear, ...txns.map((t) => +t.date?.slice(0, 4)).filter(Boolean)]);
+    $('#acct-year').innerHTML = [...years].sort((a, b) => b - a).map((y) => `<option ${y === acctYear ? 'selected' : ''}>${y}</option>`).join('');
+    $('#acct-period').innerHTML = [['year', 'Full year'], ['Q1', 'Q1 (Jan–Mar)'], ['Q2', 'Q2 (Apr–Jun)'], ['Q3', 'Q3 (Jul–Sep)'], ['Q4', 'Q4 (Oct–Dec)'], ...MONTH_ABBR.map((m, i) => [String(i + 1), new Date(2000, i, 1).toLocaleDateString(undefined, { month: 'long' })])]
+      .map(([v, l]) => `<option value="${v}" ${v === acctPeriod ? 'selected' : ''}>${l}</option>`).join('');
+    const range = periodRange();
+    $('#acct-range').textContent = `${fmtShort(range[0])} – ${fmtShort(range[1])}`;
+    $('#tax-rate').value = state.taxRate ?? 25;
+
+    const inP = txns.filter((t) => inRange(t, range));
+    const rev = sum(inP.filter(isRev)); const exp = sum(inP.filter(isExp));
+    const net = rev - exp;
+    const expected = sum(inP.filter((t) => t.kind === 'Income' && t.status === 'Expected'));
+    const due = sum(inP.filter((t) => t.kind === 'Expense' && t.status === 'Due'));
+    const tax = Math.max(0, net) * (Number(state.taxRate) || 0) / 100;
+    $('#acct-stats').innerHTML = [
+      [money(rev), 'Revenue received', ''],
+      [money(exp), 'Expenses paid', due ? `${money(due)} more due` : ''],
+      [(net < 0 ? '−' : '') + money(Math.abs(net)), 'Net profit', rev ? `${Math.round(net / rev * 100)}% margin` : '', net < 0 ? 'neg' : ''],
+      [money(expected), 'Expected income', 'Commissions not yet paid'],
+      [money(tax), 'Tax set-aside', `${state.taxRate ?? 25}% of net profit`],
+    ].map(([n, l, sub, cls]) => `<div class="stat"><div class="num ${cls || ''}">${esc(n)}</div><div class="lbl">${esc(l)}</div>${sub ? `<div class="sub">${esc(sub)}</div>` : ''}</div>`).join('');
+
+    renderAcctChart(range);
+    renderPL(inP, rev, exp, net, expected, tax, range);
+
+    // expenses by category
+    const byCat = {};
+    inP.filter(isExp).forEach((t) => { byCat[t.category] = (byCat[t.category] || 0) + amt(t); });
+    const cats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+    const maxC = cats[0]?.[1] || 1;
+    $('#exp-cats').innerHTML = cats.length
+      ? cats.map(([c, v]) => `<div class="cat-row" title="${esc(c)}: ${money2(v)}"><span>${esc(c)}</span><div class="bar"><i style="width:${(v / maxC * 100).toFixed(1)}%"></i></div><span class="v">${money(v)} · ${Math.round(v / exp * 100)}%</span></div>`).join('')
+      : '<p class="muted">No expenses in this period yet.</p>';
+
+    // ledger
+    const tf = $('#txn-type-filter').value; const q = $('#txn-search').value.trim().toLowerCase();
+    const rows = inP.filter((t) => (!tf || t.kind === tf) && (!q || [t.desc, t.client, t.vendor, t.category, t.notes].join(' ').toLowerCase().includes(q)))
+      .sort((a, b) => b.date.localeCompare(a.date));
+    $('#txn-table').innerHTML = rows.length
+      ? `<thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Status</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+        ${rows.map((t) => `<tr class="clickable" data-txn="${t.id}">
+          <td>${esc(fmtShort(t.date))}</td>
+          <td>${esc(t.desc)}${t.client || t.vendor ? `<div class="hint">${esc([t.client, t.vendor].filter(Boolean).join(' · '))}</div>` : ''}</td>
+          <td class="muted">${esc(t.category)}</td>
+          <td><span class="status ${esc(t.status)}">${esc(t.status)}</span></td>
+          <td class="amt-cell ${t.kind === 'Income' ? 'inc' : ''}">${t.kind === 'Income' ? '+' : '−'}${money2(amt(t)).replace('−', '')}</td></tr>`).join('')}</tbody>`
+      : `<tbody><tr><td class="muted">${txns.length ? 'No transactions match this period or filter.' : 'No transactions yet. Add your first expense (host agency fee, Canva, website…) or income.'}</td></tr></tbody>`;
+  }
+
+  function renderAcctChart(range) {
+    const data = monthly();
+    $('#acct-chart-title').textContent = `Revenue vs. expenses by month — ${acctYear}`;
+    const W = 820, H = 250, L = 52, R = 8, T = 10, B = 26;
+    const max = niceMax(Math.max(...data.map((d) => Math.max(d.rev, d.exp))));
+    const y = (v) => T + (H - T - B) * (1 - v / max);
+    const band = (W - L - R) / 12; const bw = Math.min(22, (band - 14) / 2);
+    const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * max);
+    const inPeriod = (i) => { const k = `${acctYear}-${String(i + 1).padStart(2, '0')}-15`; return k >= range[0].slice(0, 8) + '01' && k <= range[1]; };
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Monthly revenue and expenses for ${acctYear}">`;
+    ticks.forEach((v) => { svg += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="axis-text" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${shortMoney(v)}</text>`; });
+    data.forEach((d, i) => {
+      const cx = L + band * i + band / 2; const op = inPeriod(i) ? 1 : 0.3;
+      svg += `<g opacity="${op}">`;
+      svg += `<path d="${barPath(cx - bw - 1, y(d.rev), bw, y(0) - y(d.rev))}" fill="var(--c-rev)"/>`;
+      svg += `<path d="${barPath(cx + 1, y(d.exp), bw, y(0) - y(d.exp))}" fill="var(--c-exp)"/>`;
+      svg += `</g><text class="axis-text" x="${cx}" y="${H - 8}" text-anchor="middle">${d.m}</text>`;
+      svg += `<rect class="hit" data-m="${i}" x="${L + band * i}" y="${T}" width="${band}" height="${H - T - B}" rx="6"/>`;
+    });
+    svg += '</svg>';
+    $('#acct-chart').innerHTML = svg;
+
+    const tbl = $('#acct-month-table');
+    tbl.hidden = !showMonthTable;
+    $('#acct-table-toggle').textContent = showMonthTable ? 'Hide table' : 'Show table';
+    if (showMonthTable) {
+      tbl.innerHTML = `<table class="table"><thead><tr><th>Month</th><th style="text-align:right">Revenue</th><th style="text-align:right">Expenses</th><th style="text-align:right">Net</th><th style="text-align:right">Expected</th></tr></thead><tbody>
+        ${data.map((d) => `<tr><td>${d.m} ${acctYear}</td><td class="amt-cell">${money(d.rev)}</td><td class="amt-cell">${money(d.exp)}</td><td class="amt-cell">${(d.rev - d.exp < 0 ? '−' : '') + money(Math.abs(d.rev - d.exp))}</td><td class="amt-cell">${money(d.expected)}</td></tr>`).join('')}</tbody></table>`;
+    }
+  }
+  const tip = $('#chart-tip');
+  $('#acct-chart').addEventListener('mousemove', (e) => {
+    const hit = e.target.closest('.hit');
+    $$('#acct-chart .hit.active').forEach((h) => h !== hit && h.classList.remove('active'));
+    if (!hit) { tip.classList.remove('show'); return; }
+    hit.classList.add('active');
+    const d = monthly()[+hit.dataset.m]; const net = d.rev - d.exp;
+    tip.innerHTML = `<b>${new Date(acctYear, d.i, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</b>
+      <div class="tr"><span><span class="sw" style="--c:var(--c-rev)"></span>Revenue</span><span>${money(d.rev)}</span></div>
+      <div class="tr"><span><span class="sw" style="--c:var(--c-exp)"></span>Expenses</span><span>${money(d.exp)}</span></div>
+      ${d.expected ? `<div class="tr"><span class="muted">Expected</span><span class="muted">${money(d.expected)}</span></div>` : ''}
+      <div class="tr net"><span>Net</span><span>${(net < 0 ? '−' : '') + money(Math.abs(net))}</span></div>`;
+    const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+    const yy = Math.max(8, e.clientY - tip.offsetHeight - 12);
+    tip.style.left = x + 'px'; tip.style.top = yy + 'px'; tip.classList.add('show');
+  });
+  $('#acct-chart').addEventListener('mouseleave', () => { tip.classList.remove('show'); $$('#acct-chart .hit.active').forEach((h) => h.classList.remove('active')); });
+  $('#acct-chart').addEventListener('click', (e) => {
+    const hit = e.target.closest('.hit'); if (!hit) return;
+    acctPeriod = String(+hit.dataset.m + 1); renderAccounting();
+  });
+  $('#acct-table-toggle').addEventListener('click', () => { showMonthTable = !showMonthTable; renderAccounting(); });
+
+  function renderPL(inP, rev, exp, net, expected, tax, range) {
+    const group = (arr) => { const g = {}; arr.forEach((t) => { g[t.category] = (g[t.category] || 0) + amt(t); }); return Object.entries(g).sort((a, b) => b[1] - a[1]); };
+    const revCats = group(inP.filter(isRev)); const expCats = group(inP.filter(isExp));
+    const row = (l, v, cls = '') => `<tr class="${cls}"><td>${esc(l)}</td><td class="amt">${v}</td></tr>`;
+    $('#pl-card').dataset.printTitle = `${state.settings.brand || ''} — Profit & Loss, ${fmtShort(range[0])} to ${fmtShort(range[1])}`;
+    $('#pl-statement').innerHTML = `<table class="pl">
+      ${row('Revenue', '', 'section')}
+      ${revCats.map(([c, v]) => row(c, money2(v), 'item')).join('') || row('No revenue yet', money2(0), 'item')}
+      ${row('Total revenue', money2(rev), 'total')}
+      ${row('Expenses', '', 'section')}
+      ${expCats.map(([c, v]) => row(c, money2(v), 'item')).join('') || row('No expenses yet', money2(0), 'item')}
+      ${row('Total expenses', money2(exp), 'total')}
+      <tr class="net"><td>Net ${net < 0 ? 'loss' : 'profit'}</td><td class="amt ${net < 0 ? 'neg' : 'pos'}">${money2(net)}</td></tr>
+      ${expected ? row('Expected income (not yet received)', money2(expected), 'item') : ''}
+      ${tax ? row(`Suggested tax set-aside (${state.taxRate}%)`, money2(tax), 'item') : ''}
+    </table>`;
+  }
+  $('#acct-year').addEventListener('change', (e) => { acctYear = +e.target.value; renderAccounting(); });
+  $('#acct-period').addEventListener('change', (e) => { acctPeriod = e.target.value; renderAccounting(); });
+  $('#txn-type-filter').addEventListener('change', renderAccounting);
+  $('#txn-search').addEventListener('input', renderAccounting);
+  $('#tax-rate').addEventListener('change', (e) => { state.taxRate = Math.max(0, Math.min(60, +e.target.value || 0)); save(); renderAccounting(); });
+  $('#print-pl').addEventListener('click', () => window.print());
+
+  // transaction dialog
+  const txnDialog = $('#txn-dialog');
+  function setKind(kind, cat, status) {
+    const f = $('#txn-form').elements;
+    $$('#txn-kind input').forEach((r) => (r.checked = r.value === kind));
+    $('#txn-category').innerHTML = (kind === 'Income' ? INCOME_CATS : EXPENSE_CATS).map((c) => `<option>${esc(c)}</option>`).join('');
+    $('#txn-status').innerHTML = STATUSES[kind].map((s) => `<option>${s}</option>`).join('');
+    if (cat) f.category.value = cat;
+    f.status.value = status || STATUSES[kind][0];
+  }
+  function openTxn(t = {}) {
+    const f = $('#txn-form').elements;
+    setKind(t.kind || 'Income', t.category, t.status);
+    ['id', 'date', 'amount', 'desc', 'client', 'vendor', 'method', 'receipt', 'notes'].forEach((k) => (f[k].value = t[k] ?? ''));
+    if (!t.date) f.date.value = ymd(new Date());
+    $('#txn-clients').innerHTML = state.clients.map((c) => `<option value="${esc(c.name)}">`).join('');
+    $('#txn-vendors').innerHTML = [...new Set([...state.suppliers.map((s) => s.name), ...(state.txns || []).map((x) => x.vendor).filter(Boolean), 'WorldVia', 'Canva', 'Mailchimp', 'Squarespace', 'Google Workspace'])].map((v) => `<option value="${esc(v)}">`).join('');
+    $('#txn-dialog-title').textContent = t.id ? 'Edit transaction' : `New ${(t.kind || 'income').toLowerCase()}`;
+    $('#delete-txn').style.visibility = $('#dup-txn').style.visibility = t.id ? 'visible' : 'hidden';
+    txnDialog.showModal();
+  }
+  $('#txn-kind').addEventListener('change', (e) => setKind(e.target.value));
+  $('#new-income').addEventListener('click', () => openTxn({ kind: 'Income' }));
+  $('#new-expense').addEventListener('click', () => openTxn({ kind: 'Expense' }));
+  $('#txn-form').addEventListener('submit', (e) => {
+    if (e.submitter?.value !== 'save') return;
+    const d = formToObj(e.target);
+    d.amount = Math.abs(Number(d.amount) || 0);
+    state.txns ||= [];
+    if (d.id) Object.assign(state.txns.find((t) => t.id === d.id), d);
+    else state.txns.push({ ...d, id: uid() });
+    save(); render(); toast(`${d.kind} saved`);
+  });
+  $('#delete-txn').addEventListener('click', () => {
+    const id = $('#txn-form').elements.id.value;
+    if (id && confirm('Delete this transaction?')) { state.txns = state.txns.filter((t) => t.id !== id); save(); render(); txnDialog.close(); }
+  });
+  $('#dup-txn').addEventListener('click', () => {
+    const d = formToObj($('#txn-form'));
+    const next = parseYmd(d.date || ymd(new Date())); next.setMonth(next.getMonth() + 1);
+    txnDialog.close();
+    openTxn({ ...d, id: '', date: ymd(next) });
+    toast('Copied. Dated one month later; adjust and save.');
+  });
+  $('#txn-table').addEventListener('click', (e) => {
+    const r = e.target.closest('[data-txn]');
+    if (r) openTxn(state.txns.find((t) => t.id === r.dataset.txn));
+  });
+  $('#export-csv').addEventListener('click', () => {
+    const range = periodRange();
+    const rows = (state.txns || []).filter((t) => inRange(t, range)).sort((a, b) => a.date.localeCompare(b.date));
+    const cols = ['date', 'kind', 'category', 'desc', 'client', 'vendor', 'status', 'method', 'amount', 'receipt', 'notes'];
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [['Date', 'Type', 'Category', 'Description', 'Client', 'Vendor', 'Status', 'Payment method', 'Amount', 'Receipt', 'Notes'].map(q).join(','),
+      ...rows.map((t) => cols.map((c) => q(c === 'amount' ? (t.kind === 'Expense' ? -amt(t) : amt(t)).toFixed(2) : t[c])).join(','))].join('\n');
+    saveFile(`transactions-${range[0]}-to-${range[1]}.csv`, csv, 'text/csv');
+  });
+  $('#cc-log').addEventListener('click', () => {
+    const v = +$('#cc-value').value || 0, r = +$('#cc-rate').value || 0, sp = +$('#cc-split').value || 0;
+    goto('accounting');
+    openTxn({ kind: 'Income', category: 'Commission', status: 'Expected', amount: (v * r / 100 * sp / 100).toFixed(2), desc: 'Commission – ', method: 'Host agency payout' });
+  });
+
+  // Files: use the claude.ai downloads capability when present, else a normal browser download
+  let downloadsCap = null;
+  if (window.claude && typeof window.claude.use === 'function') window.claude.use('downloads').then((d) => { downloadsCap = d || null; }).catch(() => {});
+  async function saveFile(filename, text, type) {
+    if (downloadsCap) {
+      try { await downloadsCap.save({ filename, data: text }); toast('Saved ' + filename); return; }
+      catch (e) { if (e?.code === 'declined') return; }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
   // ---------- Legal ----------
   const DOC_TYPES = ['Terms & Conditions', 'Contract', 'Intake Form', 'Waiver & Release', 'Payment Form', 'Policy', 'Other'];
   const INTAKE_DEFAULT = () => `CLIENT INTAKE FORM — ${state.settings.brand || 'Seasoned Voyages'}
@@ -1038,13 +1297,7 @@ LOGISTICS & AGREEMENTS
     $('#settings-saved').textContent = 'Saved ✓';
     setTimeout(() => ($('#settings-saved').textContent = ''), 2000);
   });
-  $('#export-data').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `advisor-hq-backup-${ymd(new Date())}.json`;
-    a.click(); URL.revokeObjectURL(a.href);
-  });
+  $('#export-data').addEventListener('click', () => saveFile(`advisor-hq-backup-${ymd(new Date())}.json`, JSON.stringify(state, null, 2), 'application/json'));
   $('#import-data').addEventListener('change', async (e) => {
     const file = e.target.files[0]; if (!file) return;
     try {
