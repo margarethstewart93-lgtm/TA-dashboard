@@ -27,6 +27,8 @@
       <div class="nav-label">Sales</div>
       <button data-tab="clients">🧳 <span>Clients &amp; Trips</span></button>
       <button data-tab="invoices">🧾 <span>Invoicing</span></button>
+      <div class="nav-label">Business</div>
+      <button data-tab="legal">⚖️ <span>Legal Docs</span></button>
       <div class="nav-label">Setup</div>
       <button data-tab="settings">⚙️ <span>Brand &amp; Settings</span></button>
     </nav>
@@ -260,6 +262,43 @@
       </div>
     </section>
 
+    <!-- LEGAL -->
+    <section id="tab-legal" class="tab">
+      <header class="page-head row">
+        <div>
+          <h1>Legal Document Hub</h1>
+          <p class="muted">The current version of every terms page, contract, and client form, with links to where each one lives and when it's due for review.</p>
+        </div>
+        <button class="btn primary" id="new-doc">+ Add document</button>
+      </header>
+      <div class="stats" id="legal-stats"></div>
+      <div class="card">
+        <div class="card-head"><h2>Documents</h2>
+          <select id="doc-filter"><option value="">All types</option></select>
+        </div>
+        <div class="table-wrap"><table class="table" id="doc-table"></table></div>
+        <p class="hint" style="margin-top:12px">Tip: keep the master copy of each document in a Google Drive "Legal" folder and paste its link here. Bump the version and date every time you update one, and note what changed.</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><h2>Client intake form questions</h2>
+            <div class="actions">
+              <a class="btn sm ghost" href="https://docs.google.com/forms" target="_blank" rel="noopener">Open Google Forms ↗</a>
+              <button class="btn sm" id="copy-intake">Copy all</button>
+            </div>
+          </div>
+          <p class="muted" style="margin-top:0">Starter questions to build your intake form in Google Forms or a Squarespace form block. Edit freely; your changes are saved.</p>
+          <textarea id="intake-text" rows="18"></textarea>
+          <div class="actions" style="margin-top:8px"><button class="link" id="reset-intake">Restore starter questions</button></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2>Compliance checklist</h2></div>
+          <ul class="checklist single" id="legal-checklist"></ul>
+          <p class="hint" style="margin-top:12px">This dashboard organizes your documents but isn't legal advice. Ask WorldVia for the templates and requirements they provide, and have a travel-industry attorney review your final terms and contracts.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- SETTINGS -->
     <section id="tab-settings" class="tab">
       <header class="page-head">
@@ -353,8 +392,44 @@
       </div>
       <label>Source<input name="source" placeholder="Instagram, referral, website…" /></label>
       <label>Notes<textarea name="notes" rows="4"></textarea></label>
+      <div class="doc-checks">
+        <div class="hint">Documents</div>
+        <div id="client-docs"></div>
+      </div>
       <div class="actions spread">
         <button type="button" class="btn danger" id="delete-client">Delete</button>
+        <div class="actions">
+          <button value="cancel" formnovalidate class="btn ghost">Cancel</button>
+          <button value="save" class="btn primary">Save</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Document modal -->
+  <dialog id="doc-dialog">
+    <form method="dialog" id="doc-form" class="modal">
+      <h2 id="doc-dialog-title">Document</h2>
+      <input type="hidden" name="id" />
+      <label>Document name<input name="name" required /></label>
+      <div class="row-2">
+        <label>Type<select name="type" id="doc-type"></select></label>
+        <label>Status
+          <select name="status"><option>Not started</option><option>Draft</option><option>Attorney review</option><option>Active</option><option>Archived</option></select>
+        </label>
+      </div>
+      <div class="row-2">
+        <label>Version<input name="version" placeholder="e.g. v1.2" /></label>
+        <label>Last updated<input name="updated" type="date" /></label>
+      </div>
+      <div class="row-2">
+        <label>Next review<input name="review" type="date" /></label>
+        <label>Where clients see it<input name="use" placeholder="e.g. website footer, sent before deposit" /></label>
+      </div>
+      <label>Link (Google Drive, website page, e-sign template)<input name="url" type="url" placeholder="https://" /></label>
+      <label>Change log / notes<textarea name="notes" rows="4" placeholder="v1.1 (Nov 2026): updated cancellation section…"></textarea></label>
+      <div class="actions spread">
+        <button type="button" class="btn danger" id="delete-doc">Delete</button>
         <div class="actions">
           <button value="cancel" formnovalidate class="btn ghost">Cancel</button>
           <button value="save" class="btn primary">Save</button>

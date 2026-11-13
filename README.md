@@ -18,6 +18,7 @@ Your data is saved in your browser (localStorage). Use **Brand & Settings → Ex
 | **Ideas & Pillars** | Content pillars with target mix, suggested weekly rhythm, and an idea bank ("Plan it →" drops an idea onto the calendar). |
 | **Clients & Trips** | Lightweight pipeline (Lead → Consultation → Proposal Sent → Booked → Traveled) until you choose a CRM, plus a CRM must-have checklist. |
 | **Invoicing** | Placeholder + commission estimator. |
+| **Legal Docs** | Library of your T&Cs, contracts, intake forms, waivers & policies, with version, last-updated date, status, link (e.g. Google Drive), change log, and review reminders (auto-set to 1 year after an Active doc's update date). Includes editable intake-form questions to paste into Google Forms and a compliance checklist. Each client record tracks which documents are on file. |
 | **Brand & Settings** | Niche, audience segments, voice, hashtags, booking/signup links — these feed every generated draft. |
 
 ## Files

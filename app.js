@@ -66,6 +66,18 @@
       { id: uid(), text: 'Plug in my first supplier offer in the Content Studio', done: false },
     ],
     crmChecks: {},
+    legalDocs: [
+      { name: 'Terms & Conditions', type: 'Terms & Conditions', use: 'Website footer + linked in every proposal' },
+      { name: 'Client Service Agreement', type: 'Contract', use: 'Signed before planning or booking begins' },
+      { name: 'Planning Fee Agreement', type: 'Contract', use: 'If/when you charge planning fees' },
+      { name: 'Client Intake Form', type: 'Intake Form', use: 'Sent after the discovery call' },
+      { name: 'Travel Insurance Acknowledgment', type: 'Waiver & Release', use: 'Signed accept/decline on every booking' },
+      { name: 'Credit Card Authorization Form', type: 'Payment Form', use: 'Before charging deposits or fees' },
+      { name: 'Privacy Policy', type: 'Policy', use: 'Website footer & email signup forms' },
+      { name: 'Photo & Testimonial Release', type: 'Waiver & Release', use: 'Before sharing client photos/reviews on Instagram' },
+    ].map((d) => ({ id: uid(), status: 'Not started', version: '', updated: '', review: '', url: '', notes: '', ...d })),
+    intakeText: null,
+    legalChecks: {},
   });
 
   // ---------- State ----------
@@ -142,6 +154,7 @@
     renderIdeas();
     renderClients();
     renderCommission();
+    renderLegal();
   }
 
   // ---------- Home ----------
@@ -673,6 +686,14 @@
   });
 
   // ---------- Clients ----------
+  const CLIENT_DOCS = {
+    intake: 'Intake form received',
+    terms: 'T&Cs acknowledged',
+    agreement: 'Service agreement signed',
+    insurance: 'Insurance accept/decline on file',
+    card: 'Card authorization on file',
+    release: 'Photo/testimonial release',
+  };
   const clientDialog = $('#client-dialog');
   function openClient(c = {}) {
     const f = $('#client-form');
@@ -680,6 +701,8 @@
     el.stage.innerHTML = STAGES.map((s) => `<option>${s}</option>`).join('');
     ['id', 'name', 'email', 'phone', 'trip', 'dates', 'value', 'source', 'notes'].forEach((k) => (el[k].value = c[k] || ''));
     el.stage.value = c.stage || 'Lead';
+    const docs = c.docs || [];
+    $('#client-docs').innerHTML = Object.entries(CLIENT_DOCS).map(([k, label]) => `<label><input type="checkbox" data-cdoc="${k}" ${docs.includes(k) ? 'checked' : ''}/>${esc(label)}</label>`).join('');
     $('#delete-client').style.visibility = c.id ? 'visible' : 'hidden';
     clientDialog.showModal();
   }
@@ -687,6 +710,7 @@
   $('#client-form').addEventListener('submit', (e) => {
     if (e.submitter?.value !== 'save') return;
     const d = formToObj(e.target);
+    d.docs = $$('#client-docs [data-cdoc]').filter((x) => x.checked).map((x) => x.dataset.cdoc);
     if (d.id) Object.assign(state.clients.find((c) => c.id === d.id), d);
     else state.clients.push({ ...d, id: uid(), created: ymd(new Date()) });
     save(); render(); toast('Client saved');
@@ -700,7 +724,7 @@
       const cs = state.clients.filter((c) => c.stage === s);
       const val = cs.reduce((t, c) => t + (Number(c.value) || 0), 0);
       return `<div class="stage"><h3>${s} <span>${cs.length}${val ? ' · ' + money(val) : ''}</span></h3>
-        ${cs.map((c) => `<div class="client-card" data-client="${c.id}"><b>${esc(c.name)}</b>${esc(c.trip || '')}${c.dates ? `<div class="muted">${esc(c.dates)}</div>` : ''}</div>`).join('') || `<div class="empty-stage">${s === 'Lead' ? 'Your first client will land here 🧳' : '—'}</div>`}
+        ${cs.map((c) => `<div class="client-card" data-client="${c.id}"><b>${esc(c.name)}</b>${esc(c.trip || '')}${c.dates ? `<div class="muted">${esc(c.dates)}</div>` : ''}<div class="docs">📄 ${(c.docs || []).length}/${Object.keys(CLIENT_DOCS).length} documents</div></div>`).join('') || `<div class="empty-stage">${s === 'Lead' ? 'Your first client will land here 🧳' : '—'}</div>`}
       </div>`;
     }).join('');
     const checks = [
@@ -732,6 +756,132 @@
     $('#cc-out').innerHTML = `Gross commission ${money(gross)} → your share <b>${money(yours)}</b>${fee ? ` + ${money(fee)} planning fee = <b>${money(yours + fee)}</b>` : ''}`;
   }
   $('#comm-calc').addEventListener('input', renderCommission);
+
+  // ---------- Legal ----------
+  const DOC_TYPES = ['Terms & Conditions', 'Contract', 'Intake Form', 'Waiver & Release', 'Payment Form', 'Policy', 'Other'];
+  const INTAKE_DEFAULT = () => `CLIENT INTAKE FORM — ${state.settings.brand || 'Seasoned Voyages'}
+
+ABOUT YOU (for each traveler)
+1. Full legal name, exactly as on passport
+2. Date of birth
+3. Email and mobile phone
+4. Mailing address
+5. Preferred way to reach you (email / phone / text)
+6. Passport country and expiration date
+7. Known Traveler / Global Entry / Redress numbers
+8. Emergency contact (name, relationship, phone)
+
+THE TRIP
+9. Where would you love to go? (or what kind of experience?)
+10. Travel dates, and how flexible they are
+11. Is this for a special occasion? (anniversary, retirement, birthday…)
+12. Who's traveling? (adults; children and their ages)
+13. Budget range (per person or total)
+14. Preferred departure airport(s)
+15. Trip style: ocean cruise / river cruise / escorted tour / independent / resort / a mix
+16. Pace: relaxed / balanced / full days
+
+PREFERENCES
+17. Accommodation style and must-haves
+18. Room or cabin preferences (bed type, accessible room, quiet location)
+19. Flight seat and class preferences; airline and hotel loyalty numbers
+20. Dietary needs or allergies
+21. Mobility, accessibility, or health considerations to plan around
+22. Interests: food & wine, history, nature, art, wellness, shopping, adventure…
+23. A past trip you loved, and one you didn't (and why)
+
+LOGISTICS & AGREEMENTS
+24. Would you like a travel insurance quote? (Yes / No)
+25. How did you hear about ${state.settings.brand || 'us'}?
+26. ☐ I have read and agree to the Terms & Conditions: [link]
+27. ☐ I agree to be contacted about my trip and occasional travel offers`;
+
+  const LEGAL_CHECKS = [
+    'Terms & Conditions linked in the website footer',
+    'Privacy Policy posted (covers website forms & Mailchimp signups)',
+    'Clients acknowledge T&Cs / sign the agreement before any payment',
+    'Travel insurance offered in writing, with signed accept/decline kept on file',
+    'Intake form completed before preparing a proposal',
+    'Confirmed with WorldVia which documents & disclosures they require or provide',
+    'Checked Seller of Travel registration rules for my state (and how my host covers me)',
+    'Errors & omissions (E&O) insurance in place (check host coverage)',
+    'E-signature tool chosen for contracts & forms',
+    'Photo/testimonial release before posting client content',
+    'Yearly review of all documents on the calendar',
+  ];
+
+  function renderLegal() {
+    const today = ymd(new Date());
+    const soon = ymd(addDays(new Date(), 30));
+    const docs = state.legalDocs;
+    const due = docs.filter((d) => d.review && d.review <= soon && d.status !== 'Archived');
+    $('#legal-stats').innerHTML = [
+      [docs.filter((d) => d.status === 'Active').length + ' / ' + docs.filter((d) => d.status !== 'Archived').length, 'Documents active'],
+      [docs.filter((d) => ['Not started', 'Draft', 'Attorney review'].includes(d.status)).length, 'In progress / to do'],
+      [due.length, 'Reviews due (30 days)'],
+      [Object.values(state.legalChecks).filter(Boolean).length + ' / ' + LEGAL_CHECKS.length, 'Checklist complete'],
+    ].map(([n, l]) => `<div class="stat"><div class="num">${esc(n)}</div><div class="lbl">${esc(l)}</div></div>`).join('');
+
+    const filt = $('#doc-filter'); const cur = filt.value;
+    filt.innerHTML = '<option value="">All types</option>' + DOC_TYPES.map((t) => `<option ${t === cur ? 'selected' : ''}>${esc(t)}</option>`).join('');
+    const rows = docs.filter((d) => !cur || d.type === cur);
+    $('#doc-table').innerHTML = rows.length ? `<thead><tr><th>Document</th><th>Type</th><th>Version</th><th>Updated</th><th>Status</th><th>Next review</th><th></th></tr></thead><tbody>
+      ${rows.map((d) => {
+        const isDue = d.review && d.review <= soon && d.status !== 'Archived';
+        return `<tr class="clickable" data-doc="${d.id}">
+          <td><div class="doc-name">${esc(d.name)}</div>${d.use ? `<div class="hint">${esc(d.use)}</div>` : ''}</td>
+          <td class="muted">${esc(d.type)}</td>
+          <td>${esc(d.version || '—')}</td>
+          <td class="muted">${d.updated ? esc(fmtShort(d.updated)) : '—'}</td>
+          <td><span class="status ${esc(d.status.split(' ')[0])}">${esc(d.status)}</span></td>
+          <td>${d.review ? `<span class="status ${isDue ? 'due' : ''}">${isDue ? (d.review < today ? 'Overdue · ' : 'Due · ') : ''}${esc(fmtShort(d.review))}</span>` : '<span class="muted">—</span>'}</td>
+          <td>${d.url ? `<a class="btn sm ghost" href="${esc(d.url)}" target="_blank" rel="noopener" data-stop>Open ↗</a>` : ''}</td>
+        </tr>`;
+      }).join('')}</tbody>` : '<tbody><tr><td class="muted">No documents of this type yet.</td></tr></tbody>';
+
+    const ta = $('#intake-text');
+    if (document.activeElement !== ta) ta.value = state.intakeText ?? INTAKE_DEFAULT();
+    $('#legal-checklist').innerHTML = LEGAL_CHECKS.map((c, i) => `<li><label><input type="checkbox" data-lcheck="${i}" ${state.legalChecks[i] ? 'checked' : ''}/>${esc(c)}</label></li>`).join('');
+  }
+
+  const docDialog = $('#doc-dialog');
+  function openDoc(d = {}) {
+    const el = $('#doc-form').elements;
+    $('#doc-type').innerHTML = DOC_TYPES.map((t) => `<option>${esc(t)}</option>`).join('');
+    ['id', 'name', 'version', 'updated', 'review', 'use', 'url', 'notes'].forEach((k) => (el[k].value = d[k] || ''));
+    el.type.value = d.type || 'Contract';
+    el.status.value = d.status || 'Draft';
+    $('#doc-dialog-title').textContent = d.id ? 'Edit document' : 'Add document';
+    $('#delete-doc').style.visibility = d.id ? 'visible' : 'hidden';
+    docDialog.showModal();
+  }
+  $('#new-doc').addEventListener('click', () => openDoc());
+  $('#doc-form').addEventListener('submit', (e) => {
+    if (e.submitter?.value !== 'save') return;
+    const d = formToObj(e.target);
+    if (d.status === 'Active' && !d.review && d.updated) d.review = ymd(addDays(parseYmd(d.updated), 365));
+    if (d.id) Object.assign(state.legalDocs.find((x) => x.id === d.id), d);
+    else state.legalDocs.push({ ...d, id: uid() });
+    save(); render(); toast('Document saved');
+  });
+  $('#delete-doc').addEventListener('click', () => {
+    const id = $('#doc-form').elements.id.value;
+    if (id && confirm('Delete this document entry? (The file itself is not affected.)')) {
+      state.legalDocs = state.legalDocs.filter((d) => d.id !== id); save(); render(); docDialog.close();
+    }
+  });
+  $('#doc-table').addEventListener('click', (e) => {
+    if (e.target.closest('[data-stop]')) return;
+    const r = e.target.closest('[data-doc]');
+    if (r) openDoc(state.legalDocs.find((d) => d.id === r.dataset.doc));
+  });
+  $('#doc-filter').addEventListener('change', renderLegal);
+  $('#intake-text').addEventListener('input', (e) => { state.intakeText = e.target.value; save(); });
+  $('#copy-intake').addEventListener('click', () => copy($('#intake-text').value));
+  $('#reset-intake').addEventListener('click', () => {
+    if (confirm('Replace your edits with the starter questions?')) { state.intakeText = null; save(); $('#intake-text').value = INTAKE_DEFAULT(); }
+  });
+  $('#legal-checklist').addEventListener('change', (e) => { state.legalChecks[e.target.dataset.lcheck] = e.target.checked; save(); renderLegal(); });
 
   // ---------- Settings ----------
   function fillSettings() {
